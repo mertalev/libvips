@@ -233,6 +233,11 @@ option('raw',
   value: 'auto',
   description: 'Build with libraw')
 
+option('dng-sdk',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build with Adobe DNG SDK (requires libraw)')
+
 option('rsvg',
   type: 'feature',
   value: 'auto',

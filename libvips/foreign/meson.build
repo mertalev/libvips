@@ -11,6 +11,7 @@ foreign_sources = files(
     'csvload.c',
     'csvsave.c',
     'dcrawload.c',
+    'dng_host_wrapper.cpp',
     'dzsave.c',
     'exif.c',
     'fits.c',
@@ -66,6 +67,7 @@ foreign_sources = files(
 
 foreign_headers = files(
     'dbh.h',
+    'dng_host_wrapper.h',
     'jpeg.h',
     'pforeign.h',
     'quantise.h',

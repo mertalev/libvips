@@ -49,6 +49,8 @@
 
 #include <libraw/libraw.h>
 
+#include "dng_host_wrapper.h"
+
 #define VIPS_TYPE_FOREIGN_LOAD_DCRAW (vips_foreign_load_dcraw_get_type())
 #define VIPS_FOREIGN_LOAD_DCRAW(obj) \
 	(G_TYPE_CHECK_INSTANCE_CAST((obj), \
@@ -79,6 +81,10 @@ typedef struct _VipsForeignLoadDcRaw {
 	 */
 	VipsSource *source;
 
+	/* DNG SDK host (if available).
+	 */
+	void *dng_host;
+
 } VipsForeignLoadDcRaw;
 
 typedef VipsForeignLoadClass VipsForeignLoadDcRawClass;
@@ -92,6 +98,10 @@ vips_foreign_load_dcraw_dispose(GObject *gobject)
 	VipsForeignLoadDcRaw *raw = (VipsForeignLoadDcRaw *) gobject;
 
 	VIPS_FREEF(libraw_dcraw_clear_mem, raw->processed);
+	if (raw->dng_host) {
+		vips_dng_host_detach(raw->raw_processor, raw->dng_host);
+		raw->dng_host = NULL;
+	}
 	VIPS_FREEF(libraw_close, raw->raw_processor);
 	VIPS_UNREF(raw->source);
 
@@ -287,6 +297,8 @@ vips_foreign_load_dcraw_header(VipsForeignLoad *load)
 		vips_error(class->nickname, "%s", _("unable to initialize libraw"));
 		return -1;
 	}
+
+	raw->dng_host = vips_dng_host_attach(raw->raw_processor);
 
 	if (raw->bitdepth != 8 &&
 		raw->bitdepth != 16) {
