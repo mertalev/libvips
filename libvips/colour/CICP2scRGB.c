@@ -535,11 +535,8 @@ vips_CICP2scRGB_build(VipsObject *object)
 
 	if (cicp->in) {
 
-		if (cicp->in->BandFmt != VIPS_FORMAT_UCHAR &&
-			cicp->in->BandFmt != VIPS_FORMAT_USHORT) {
-			vips_error(class->nickname, "%s", _("image must be uchar or ushort"));
-			return -1;
-		}
+        if (vips_check_u8or16(class->nickname, cicp->in))
+            return -1;
 
 		if (vips_image_get_int(cicp->in, "cicp-colour-primaries", &colour_primaries) ||
 			vips_image_get_int(cicp->in, "cicp-transfer-characteristics", &transfer_characteristics) ||
