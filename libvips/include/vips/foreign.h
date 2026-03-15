@@ -314,7 +314,7 @@ void vips_foreign_load_invalidate(VipsImage *image);
  * @VIPS_FOREIGN_SAVEABLE_RGB: 3 bands
  * @VIPS_FOREIGN_SAVEABLE_CMYK: 4 bands
  * @VIPS_FOREIGN_SAVEABLE_ALPHA: an extra band
- * @VIPS_FOREIGN_SAVEABLE_CICP: saver can write CICP tag
+ * @VIPS_FOREIGN_SAVEABLE_CICP: saver can preserve CICP metadata
  *
  * The set of image types supported by a saver.
  *

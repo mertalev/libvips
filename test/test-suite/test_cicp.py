@@ -16,7 +16,7 @@ def make_cicp_image(r, g, b, primaries=1, transfer=1, mc=0, fmt="uchar"):
     else:
         raise ValueError(f"unsupported format: {fmt}")
 
-    im = im.copy(interpretation="cicp")
+    im = im.copy(interpretation="rgb16" if fmt == "ushort" else "srgb")
     im.set_type(pyvips.GValue.gint_type, "cicp-colour-primaries", primaries)
     im.set_type(
         pyvips.GValue.gint_type, "cicp-transfer-characteristics", transfer
@@ -223,43 +223,6 @@ class TestCICP:
         assert result.interpretation == "scrgb"
         assert result.bands == 3
 
-    # -- Colourspace routing tests --
-
-    @pytest.mark.parametrize("space", [
-        "xyz", "lab", "lch", "cmc", "labs", "scrgb", "hsv",
-        "srgb", "yxy", "b-w", "rgb16", "grey16", "oklab", "oklch",
-        "cmyk",
-    ])
-    def test_cicp_to_colourspace(self, space):
-        im = make_cicp_image(128, 100, 80)
-        out = im.colourspace(space)
-        assert out.interpretation == space
-
-    def test_cicp_to_cicp_identity(self):
-        im = make_cicp_image(200, 100, 50)
-        out = im.colourspace("cicp")
-        pixel = out(0, 0)
-        assert pixel[0] == 200
-        assert pixel[1] == 100
-        assert pixel[2] == 50
-
-    def test_cicp_to_srgb_bt709(self):
-        # BT.709 128/255 -> linear 0.261482 -> sRGB OETF -> 8-bit 140
-        im = make_cicp_image(128, 128, 128, transfer=TRANSFER_BT709)
-        srgb = im.colourspace("srgb")
-        pixel = srgb(0, 0)
-        for i in range(3):
-            assert abs(pixel[i] - 140) < 2
-
-    def test_cicp_to_lab_roundtrip(self):
-        im = make_cicp_image(180, 120, 80)
-        direct = im.colourspace("scrgb")
-        via_lab = im.colourspace("lab").colourspace("scrgb")
-        d = direct(0, 0)
-        v = via_lab(0, 0)
-        for i in range(3):
-            assert abs(d[i] - v[i]) < 0.01
-
     # -- JXL round-trip tests --
 
     @skip_if_no("jxlsave")
@@ -280,7 +243,7 @@ class TestCICP:
         pixel = out(0, 0)
         assert pixel[0] < 200, \
             f"pixel value {pixel[0]} suggests sRGB conversion"
-        assert out.interpretation == "cicp"
+        assert out.get_typeof("cicp-transfer-characteristics") != 0
 
     @skip_if_no("jxlsave")
     def test_jxl_cicp_ushort_preserved(self):
@@ -323,7 +286,6 @@ class TestCICP:
         buf = im.jxlsave_buffer()
         out = pyvips.Image.new_from_buffer(buf, "")
 
-        assert out.interpretation == "cicp"
         assert out.get("cicp-transfer-characteristics") == TRANSFER_PQ
         assert out.get("cicp-colour-primaries") == PRIMARIES_BT2020
 
@@ -355,8 +317,8 @@ class TestCICP:
                              transfer=TRANSFER_SRGB)
         buf = im.jxlsave_buffer()
         out = pyvips.Image.new_from_buffer(buf, "")
-        assert out.interpretation == "cicp", \
-            f"{name}: expected cicp interpretation"
+        assert out.get_typeof("cicp-colour-primaries") != 0, \
+            f"{name}: expected cicp metadata"
         assert out.get("cicp-colour-primaries") == primaries, \
             f"{name}: primaries {out.get('cicp-colour-primaries')} != {primaries}"
 
@@ -402,7 +364,6 @@ class TestCICP:
                              transfer=TRANSFER_PQ)
         buf = im.heifsave_buffer()
         out = pyvips.Image.new_from_buffer(buf, "")
-        assert out.interpretation == "cicp"
         assert out.get("cicp-colour-primaries") == PRIMARIES_DISPLAY_P3
         assert out.get("cicp-transfer-characteristics") == TRANSFER_PQ
         assert out.get("cicp-matrix-coefficients") == 0
@@ -435,7 +396,6 @@ class TestCICP:
         buf = im.heifsave_buffer()
         out = pyvips.Image.new_from_buffer(buf, "")
 
-        assert out.interpretation == "cicp"
         assert out.get("cicp-transfer-characteristics") == TRANSFER_PQ
         assert out.get("cicp-colour-primaries") == PRIMARIES_BT2020
 
@@ -456,3 +416,20 @@ class TestCICP:
         if out.get_typeof("cicp-colour-primaries"):
             assert out.get("cicp-colour-primaries") == PRIMARIES_DISPLAY_P3
             assert out.get("cicp-transfer-characteristics") == TRANSFER_PQ
+
+    # -- Save fallback tests --
+
+    @skip_if_no("webpsave")
+    def test_cicp_to_non_cicp_saver_converts(self):
+        im = make_cicp_image(128, 128, 128,
+                             primaries=PRIMARIES_BT709,
+                             transfer=TRANSFER_BT709)
+        im = im.embed(0, 0, 64, 64, extend="copy")
+
+        # BT.709 and sRGB have different curves, so the round-trip
+        # shifts: BT.709 128/255 -> linear ~0.262 -> sRGB OETF -> ~139.
+        buf = im.webpsave_buffer(lossless=True)
+        out = pyvips.Image.new_from_buffer(buf, "")
+        pixel = out(0, 0)
+        assert abs(pixel[0] - 139) < 1.1, \
+            f"pixel {pixel[0]}: expected ~139 after BT.709->sRGB round-trip"

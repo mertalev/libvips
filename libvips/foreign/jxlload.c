@@ -855,26 +855,6 @@ vips_foreign_load_jxl_set_header(VipsForeignLoadJxl *jxl, VipsImage *out)
 		break;
 	}
 
-	gboolean is_standard_srgb =
-		jxl->color_encoding.primaries == JXL_PRIMARIES_SRGB &&
-		(jxl->color_encoding.transfer_function == JXL_TRANSFER_FUNCTION_SRGB ||
-			jxl->color_encoding.transfer_function == JXL_TRANSFER_FUNCTION_709 ||
-			jxl->color_encoding.transfer_function == JXL_TRANSFER_FUNCTION_LINEAR);
-
-	/* If the JXL stream uses non-sRGB primaries or an HDR transfer,
-	 * override to CICP so the colour pipeline applies the correct conversion.
-	 * For custom primaries, only tag CICP if we can match them to a
-	 * known H.273 code -- otherwise we can't convert correctly.
-	 */
-	if (jxl->color_encoding.color_space == JXL_COLOR_SPACE_RGB &&
-		jxl->info.num_color_channels == 3 &&
-		!is_standard_srgb &&
-		(jxl->color_encoding.primaries != JXL_PRIMARIES_CUSTOM ||
-			vips_foreign_load_jxl_match_custom_primaries(
-				&jxl->color_encoding) !=
-				VIPS_CICP_COLOUR_PRIMARIES_UNSPECIFIED))
-		interpretation = VIPS_INTERPRETATION_CICP;
-
 	if (jxl->frame_count > 1) {
 		if (jxl->n == -1)
 			jxl->n = jxl->frame_count - jxl->page; // FIXME: Invalidates operation cache

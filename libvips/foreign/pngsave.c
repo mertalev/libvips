@@ -125,9 +125,7 @@ vips_foreign_save_png_build(VipsObject *object)
 	/* The bitdepth param can change the interpretation.
 	 */
 	VipsInterpretation interpretation;
-	if (in->Type == VIPS_INTERPRETATION_CICP)
-		interpretation = VIPS_INTERPRETATION_CICP;
-	else if (in->Bands > 2) {
+	if (in->Bands > 2) {
 	   if (png->bitdepth > 8)
 		   interpretation = VIPS_INTERPRETATION_RGB16;
 	   else

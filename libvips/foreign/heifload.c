@@ -660,7 +660,7 @@ vips_foreign_load_heif_set_header(VipsForeignLoadHeif *heif, VipsImage *out)
 	 */
 	vips_autorot_remove_angle(out);
 
-	// if both nclx and ICC are present, ICC is returned
+	/* if both nclx and ICC are present, ICC is returned */
 	enum heif_color_profile_type profile_type =
 		heif_image_handle_get_color_profile_type(heif->handle);
 
@@ -797,13 +797,6 @@ vips_foreign_load_heif_set_header(VipsForeignLoadHeif *heif, VipsImage *out)
 		interpretation = VIPS_INTERPRETATION_sRGB;
 		format = VIPS_FORMAT_UCHAR;
 	}
-
-	/* Use CICP interpretation when CICP metadata was set -- either
-	 * because NCLX was the only profile, or because NCLX indicates
-	 * an HDR transfer that ICC cannot represent.
-	 */
-	if (vips_image_get_typeof(out, "cicp-transfer-characteristics"))
-		interpretation = VIPS_INTERPRETATION_CICP;
 
 	/* FIXME .. we always decode to RGB in generate. We should check for
 	 * all grey images, perhaps.

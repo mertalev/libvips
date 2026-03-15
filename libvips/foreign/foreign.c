@@ -1460,16 +1460,13 @@ vips_foreign_apply_saveable(VipsImage *in, VipsImage **ready,
 		return 0;
 	}
 
-	/* CICP image? If our saver supports CICP we pass through,
-	 * otherwise convert to scRGB.
+	/* CICP image? If our saver can't preserve CICP metadata,
+	 * linearize to scRGB so the subsequent sRGB conversion
+	 * applies the correct transfer function.
 	 */
-	if (vips_image_guess_interpretation(in) == VIPS_INTERPRETATION_CICP) {
-		if (saveable & VIPS_FOREIGN_SAVEABLE_CICP) {
-			*ready = in;
-			return 0;
-		}
-
-		if (vips_colourspace(in, &out, VIPS_INTERPRETATION_scRGB, NULL)) {
+	if (vips_image_get_typeof(in, "cicp-transfer-characteristics") &&
+		!(saveable & VIPS_FOREIGN_SAVEABLE_CICP)) {
+		if (vips_CICP2scRGB(in, &out, NULL)) {
 			g_object_unref(in);
 			return -1;
 		}

@@ -235,7 +235,6 @@ vips_interpretation_bands(VipsInterpretation interpretation)
 	case VIPS_INTERPRETATION_HSV:
 	case VIPS_INTERPRETATION_OKLAB:
 	case VIPS_INTERPRETATION_OKLCH:
-	case VIPS_INTERPRETATION_CICP:
 		return 3;
 
 	case VIPS_INTERPRETATION_CMYK:
@@ -268,9 +267,7 @@ vips_image_get_bits_per_sample(VipsImage *image)
 		return bits_per_sample;
 
 	if (image->Type == VIPS_INTERPRETATION_RGB16 ||
-		image->Type == VIPS_INTERPRETATION_GREY16 ||
-		(image->Type == VIPS_INTERPRETATION_CICP &&
-			image->BandFmt != VIPS_FORMAT_UCHAR))
+		image->Type == VIPS_INTERPRETATION_GREY16)
 		return 16;
 
 	return 8;

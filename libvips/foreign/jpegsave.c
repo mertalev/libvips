@@ -148,17 +148,23 @@ vips_foreign_save_jpeg_build(VipsObject *object)
 		jpeg->subsample_mode = jpeg->no_subsample ?
 			VIPS_FOREIGN_SUBSAMPLE_OFF : VIPS_FOREIGN_SUBSAMPLE_AUTO;
 
+	int cicp_transfer = 0;
+	gboolean is_hdr_cicp =
+		vips_image_get_int(save->ready,
+			"cicp-transfer-characteristics", &cicp_transfer) == 0 &&
+		(cicp_transfer == VIPS_CICP_TRANSFER_PQ ||
+			cicp_transfer == VIPS_CICP_TRANSFER_HLG);
+
 	if (vips_image_get_typeof(save->ready, "gainmap-data") ||
 		save->ready->Type == VIPS_INTERPRETATION_scRGB ||
-		save->ready->Type == VIPS_INTERPRETATION_CICP) {
-		/* Pass on to uhdrsave. CICP images need converting to
+		is_hdr_cicp) {
+		/* Pass on to uhdrsave. HDR CICP images need converting to
 		 * scRGB first so the uhdr encoder sees linear BT.709.
 		 */
 		VipsImage *x = NULL;
 
-		if (save->ready->Type == VIPS_INTERPRETATION_CICP &&
-			vips_colourspace(save->ready, &x,
-				VIPS_INTERPRETATION_scRGB, NULL))
+		if (is_hdr_cicp &&
+			vips_CICP2scRGB(save->ready, &x, NULL))
 			return -1;
 
 		if (vips_uhdrsave_target(x ? x : save->ready, jpeg->target,
