@@ -356,6 +356,24 @@ typedef enum /*< flags >*/ {
 } VipsForeignCoding;
 
 /**
+ * VipsForeignColour:
+ * @VIPS_FOREIGN_COLOUR_NONE: saver supports no colour metadata
+ * @VIPS_FOREIGN_COLOUR_CICP: saver supports CICP
+ * @VIPS_FOREIGN_COLOUR_ICC: saver supports ICC profiles
+ * @VIPS_FOREIGN_COLOUR_ALL: saver supports all colour metadata
+ *
+ * The set of colour metadata supported by a saver.
+ */
+typedef enum /*< flags >*/ {
+	VIPS_FOREIGN_COLOUR_NONE = 0,
+	VIPS_FOREIGN_COLOUR_CICP = 1 << 0,
+	VIPS_FOREIGN_COLOUR_ICC = 1 << 1,
+
+	VIPS_FOREIGN_COLOUR_ALL = (VIPS_FOREIGN_COLOUR_CICP |
+		VIPS_FOREIGN_COLOUR_ICC)
+} VipsForeignColour;
+
+/**
  * VipsForeignKeep:
  * @VIPS_FOREIGN_KEEP_NONE: don't attach metadata
  * @VIPS_FOREIGN_KEEP_EXIF: keep Exif metadata
@@ -452,6 +470,13 @@ typedef struct _VipsForeignSaveClass {
 	 * Default to [flags@Vips.ForeignCoding.NONE].
 	 */
 	VipsForeignCoding coding;
+
+	/* The set of colour metadata this format can save. CICP images are
+	 * decoded for formats that can't save CICP.
+	 *
+	 * Default to [flags@Vips.ForeignColour.NONE].
+	 */
+	VipsForeignColour colour;
 } VipsForeignSaveClass;
 
 VIPS_API

@@ -143,6 +143,7 @@ vips_foreign_save_vips_class_init(VipsForeignSaveVipsClass *class)
 
 	save_class->saveable = VIPS_FOREIGN_SAVEABLE_ANY;
 	save_class->coding = VIPS_FOREIGN_CODING_ALL;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ALL;
 }
 
 static void

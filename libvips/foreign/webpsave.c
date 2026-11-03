@@ -809,6 +809,7 @@ vips_foreign_save_webp_class_init(VipsForeignSaveWebpClass *class)
 	save_class->saveable =
 		VIPS_FOREIGN_SAVEABLE_RGB | VIPS_FOREIGN_SAVEABLE_ALPHA;
 	save_class->format_table = bandfmt_webp;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
 
 	VIPS_ARG_INT(class, "Q", 10,
 		_("Q"),

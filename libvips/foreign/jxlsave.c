@@ -1351,6 +1351,7 @@ vips_foreign_save_jxl_class_init(VipsForeignSaveJxlClass *class)
 
 	save_class->saveable = VIPS_FOREIGN_SAVEABLE_ANY;
 	save_class->format_table = bandfmt_jxl;
+	save_class->colour = VIPS_FOREIGN_COLOUR_CICP | VIPS_FOREIGN_COLOUR_ICC;
 
 	VIPS_ARG_INT(class, "tier", 10,
 		_("Tier"),

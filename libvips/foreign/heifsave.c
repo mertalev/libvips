@@ -868,6 +868,10 @@ vips_foreign_save_heif_class_init(VipsForeignSaveHeifClass *class)
 	save_class->saveable =
 		VIPS_FOREIGN_SAVEABLE_RGB | VIPS_FOREIGN_SAVEABLE_ALPHA;
 	save_class->format_table = vips_heif_bandfmt;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
+#ifdef HAVE_HEIF_ENCODING_OPTIONS_OUTPUT_NCLX_PROFILE
+	save_class->colour |= VIPS_FOREIGN_COLOUR_CICP;
+#endif /*HAVE_HEIF_ENCODING_OPTIONS_OUTPUT_NCLX_PROFILE*/
 
 	VIPS_ARG_INT(class, "Q", 10,
 		_("Q"),

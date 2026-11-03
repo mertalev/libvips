@@ -216,6 +216,9 @@ vips_foreign_save_jpeg_class_init(VipsForeignSaveJpegClass *class)
 	 * See also vips_foreign_save_tiff_build() when saving JPEG in TIFF.
 	 */
 	save_class->saveable = VIPS_FOREIGN_SAVEABLE_ANY;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
+	if (have_uhdr)
+		save_class->colour |= VIPS_FOREIGN_COLOUR_CICP;
 
 	VIPS_ARG_INT(class, "Q", 10,
 		_("Q"),

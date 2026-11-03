@@ -815,3 +815,94 @@ class TestCICP:
         assert (out - im).abs().max() == 0
         assert out.get("cicp-matrix-coefficients") == 0
         assert out.get("cicp-full-range-flag") == 1
+
+    @skip_if_no("webpsave")
+    def test_saver_without_cicp_or_icc_decodes_sdr(self):
+        im = make_cicp_image(200, 100, 50, primaries=PRIMARIES_DISPLAY_P3,
+                             transfer=TRANSFER_SRGB, width=8, height=8)
+        attached = im.copy()
+        attached.set_type(pyvips.GValue.blob_type, "icc-profile-data",
+                          pyvips.Operation.call("profile_load", "srgb"))
+
+        expected = im.CICP2scRGB().colourspace("srgb")
+        for buf in [attached.write_to_buffer(".ppm"),
+                    im.webpsave_buffer(lossless=True),
+                    im.webpsave_buffer(lossless=True, profile="none"),
+                    attached.webpsave_buffer(lossless=True, keep="none")]:
+            out = pyvips.Image.new_from_buffer(buf, "")
+            assert (out - expected).abs().max() == 0
+
+    @skip_if_no("tiffsave")
+    def test_saver_without_cicp_clips_hdr_at_sdr_white(self):
+        im = make_cicp_image(49284, 38011, 33292, primaries=PRIMARIES_BT2020,
+                             transfer=TRANSFER_PQ, fmt="ushort",
+                             width=8, height=8)
+
+        out = pyvips.Image.new_from_buffer(
+            im.bandjoin([30000, 20000]).tiffsave_buffer(), "")
+
+        expected = im.CICP2scRGB().colourspace("rgb16")
+        assert (out - expected.bandjoin([30000, 20000])).abs().max() == 0
+
+    @skip_if_no("tiffsave")
+    def test_saver_without_cicp_removes_the_tags(self):
+        im = add_clli(make_cicp_image(30000, 20000, 10000,
+                                      primaries=PRIMARIES_BT2020,
+                                      transfer=TRANSFER_PQ, fmt="ushort",
+                                      width=8, height=8))
+        im.set_type(pyvips.GValue.blob_type, "icc-profile-data",
+                    pyvips.Operation.call("profile_load", "srgb"))
+
+        out = pyvips.Image.new_from_buffer(
+            im.tiffsave_buffer(properties=True), "")
+
+        for name in ["cicp-", "clli-", "icc-profile-data"]:
+            assert name not in out.get("image-description")
+
+    @skip_if_no("webpsave")
+    def test_saver_without_cicp_keeps_sdr_with_a_profile(self):
+        im = make_cicp_image(200, 100, 50, primaries=PRIMARIES_DISPLAY_P3,
+                             transfer=TRANSFER_SRGB, width=8, height=8)
+        p3 = pyvips.Operation.call("profile_load", "p3")
+        attached = im.copy()
+        attached.set_type(pyvips.GValue.blob_type, "icc-profile-data", p3)
+
+        for buf in [attached.webpsave_buffer(lossless=True),
+                    im.webpsave_buffer(lossless=True, profile="p3")]:
+            out = pyvips.Image.new_from_buffer(buf, "")
+            assert (out - im).abs().max() == 0
+            assert out.get("icc-profile-data") == p3
+
+    @skip_if_no("tiffsave")
+    @pytest.mark.parametrize("bands,transfer", [
+        (2, TRANSFER_BT709),
+        (3, TRANSFER_SRGB),
+    ], ids=["grey", "srgb"])
+    def test_saver_without_cicp_leaves_some_records_alone(self, bands,
+                                                          transfer):
+        im = make_cicp_image(33333, 22222, 11111, transfer=transfer,
+                             fmt="ushort", width=8, height=8)[:bands]
+
+        out = pyvips.Image.new_from_buffer(im.tiffsave_buffer(), "")
+
+        assert (out - im).abs().max() == 0
+
+    def test_vipssave_keeps_cicp(self, tmp_path):
+        im = make_cicp_image(200, 100, 50, primaries=PRIMARIES_DISPLAY_P3,
+                             transfer=TRANSFER_SRGB, width=8, height=8)
+
+        im.write_to_file(str(tmp_path / "x.v"))
+        out = pyvips.Image.new_from_file(str(tmp_path / "x.v"))
+
+        assert (out - im).abs().max() == 0
+        assert out.get("cicp-colour-primaries") == PRIMARIES_DISPLAY_P3
+
+    @skip_if_no("uhdrsave")
+    def test_jpegsave_saves_cicp_hdr_as_uhdr(self):
+        im = make_cicp_image(30000, 20000, 10000, primaries=PRIMARIES_BT2020,
+                             transfer=TRANSFER_PQ, fmt="ushort",
+                             width=64, height=64)
+
+        out = pyvips.Image.new_from_buffer(im.jpegsave_buffer(), "")
+
+        assert out.get_typeof("gainmap-data") != 0

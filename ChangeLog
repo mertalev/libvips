@@ -67,6 +67,7 @@ date-tbd 8.19.0
 - add vips_image_get_blob_value()
 - dzsave: reject imagename containing path separator [lovell]
 - heifsave: force identity matrix for lossless cicp [mertalev]
+- foreign: decode cicp for savers that can't write it [mertalev]
 
 tdb 8.18.8
 

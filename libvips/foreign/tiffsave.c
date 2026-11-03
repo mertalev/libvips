@@ -252,6 +252,7 @@ vips_foreign_save_tiff_class_init(VipsForeignSaveTiffClass *class)
 
 	save_class->saveable = VIPS_FOREIGN_SAVEABLE_ANY;
 	save_class->coding |= VIPS_FOREIGN_CODING_LABQ;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
 
 	VIPS_ARG_ENUM(class, "compression", 6,
 		_("Compression"),

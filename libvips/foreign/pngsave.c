@@ -59,6 +59,8 @@
 
 #ifdef HAVE_PNG
 
+#include <png.h>
+
 typedef struct _VipsForeignSavePng {
 	VipsForeignSave parent_object;
 
@@ -222,6 +224,10 @@ vips_foreign_save_png_class_init(VipsForeignSavePngClass *class)
 		VIPS_FOREIGN_SAVEABLE_RGB |
 		VIPS_FOREIGN_SAVEABLE_ALPHA;
 	save_class->format_table = bandfmt_png;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
+#ifdef PNG_cICP_SUPPORTED
+	save_class->colour |= VIPS_FOREIGN_COLOUR_CICP;
+#endif /*PNG_cICP_SUPPORTED*/
 
 	VIPS_ARG_INT(class, "compression", 6,
 		_("Compression"),

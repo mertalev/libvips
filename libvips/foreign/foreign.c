@@ -1796,6 +1796,84 @@ vips__foreign_update_metadata(VipsImage *in,
 	return 0;
 }
 
+/* Decode CICP for savers that can't write it, with HDR clipped at SDR white.
+ * SDR that is sRGB, or has a profile the saver writes, stays as is.
+ */
+static int
+vips_foreign_save_convert_cicp(VipsForeignSave *save, VipsImage **out)
+{
+	VipsForeignSaveClass *class = VIPS_FOREIGN_SAVE_GET_CLASS(save);
+	VipsImage *in = save->in;
+	int colour_primaries;
+	int transfer_characteristics;
+	int matrix_coefficients;
+	int full_range_flag;
+
+	*out = in;
+
+	if ((class->colour & VIPS_FOREIGN_COLOUR_CICP) ||
+		in->Coding != VIPS_CODING_NONE ||
+		in->Bands < 3 ||
+		!vips__image_is_cicp(in, &colour_primaries,
+			&transfer_characteristics, &matrix_coefficients,
+			&full_range_flag))
+		return 0;
+
+	gboolean hdr = vips__image_is_cicp_hdr(in);
+	gboolean icc = (class->colour & VIPS_FOREIGN_COLOUR_ICC) &&
+		(save->keep & VIPS_FOREIGN_KEEP_ICC) &&
+		(save->profile
+				? g_ascii_strcasecmp(save->profile, "none")
+				: vips_image_get_typeof(in, VIPS_META_ICC_NAME));
+	if (!hdr &&
+		(icc ||
+			(colour_primaries == VIPS_CICP_COLOUR_PRIMARIES_BT709 &&
+				transfer_characteristics == VIPS_CICP_TRANSFER_SRGB)))
+		return 0;
+
+	VipsImage **t =
+		(VipsImage **) vips_object_local_array(VIPS_OBJECT(save), 6);
+
+	/* Set extra bands aside so colour ops leave them alone.
+	 */
+	if (in->Bands > 3) {
+		if (vips_extract_band(in, &t[0], 0, "n", 3, NULL))
+			return -1;
+		in = t[0];
+	}
+
+	if (vips_CICP2scRGB(in, &t[1], NULL))
+		return -1;
+	in = t[1];
+
+	if (vips_colourspace(in, &t[2],
+			save->in->BandFmt == VIPS_FORMAT_USHORT
+				? VIPS_INTERPRETATION_RGB16
+				: VIPS_INTERPRETATION_sRGB,
+			NULL))
+		return -1;
+	in = t[2];
+
+	if (save->in->Bands > 3) {
+		if (vips_extract_band(save->in, &t[3], 3,
+				"n", save->in->Bands - 3, NULL) ||
+			vips_bandjoin2(in, t[3], &t[4], NULL))
+			return -1;
+		in = t[4];
+	}
+
+	if (vips_copy(in, &t[5], NULL))
+		return -1;
+	in = t[5];
+	vips__image_remove_cicp(in);
+	vips__image_remove_clli(in);
+	vips_image_remove(in, VIPS_META_ICC_NAME);
+
+	*out = in;
+
+	return 0;
+}
+
 static int
 vips_foreign_save_build(VipsObject *object)
 {
@@ -1817,10 +1895,12 @@ vips_foreign_save_build(VipsObject *object)
 
 	if (save->in) {
 		VipsForeignSaveClass *class = VIPS_FOREIGN_SAVE_GET_CLASS(save);
+		VipsImage *in;
 		VipsImage *ready;
 		VipsImage *x;
 
-		if (vips__foreign_convert_saveable(save->in, &ready,
+		if (vips_foreign_save_convert_cicp(save, &in) ||
+			vips__foreign_convert_saveable(in, &ready,
 				class->saveable, class->format_table, class->coding,
 				save->background))
 			return -1;

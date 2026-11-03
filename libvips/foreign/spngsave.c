@@ -696,6 +696,7 @@ vips_foreign_save_spng_class_init(VipsForeignSaveSpngClass *class)
 		VIPS_FOREIGN_SAVEABLE_RGB |
 		VIPS_FOREIGN_SAVEABLE_ALPHA;
 	save_class->format_table = bandfmt_spng;
+	save_class->colour = VIPS_FOREIGN_COLOUR_ICC;
 
 	VIPS_ARG_INT(class, "compression", 6,
 		_("Compression"),
